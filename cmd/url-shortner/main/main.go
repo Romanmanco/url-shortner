@@ -42,9 +42,3 @@ func setupLogger(env string) *slog.Logger {
 	}
 	return log
 }
-
-//TODO config: cleanenv
-//TODO logger: slog
-//TODO storage: postgres/sqlite
-//TODO router: chi, chi render
-//TODO run server
