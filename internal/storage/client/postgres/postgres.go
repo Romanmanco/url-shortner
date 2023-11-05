@@ -21,7 +21,7 @@ func New(dbURL string) (*Storage, error) {
 		return nil, fmt.Errorf("%s: %w", fn, err)
 	}
 
-	// Создаем таблицу для сохранения информации
+	// create table for save info
 	_, err = db.Exec(`
 	CREATE TABLE IF NOT EXISTS url (
 	    id SERIAL PRIMARY KEY,
@@ -41,13 +41,13 @@ func New(dbURL string) (*Storage, error) {
 func (s *Storage) SaveURL(urlToDb, alias string) (int64, error) {
 	const op = "storage.postgres.SaveURL"
 
-	// Подготовка SQL-запроса с использованием $1 и $2 для параметров.
+	// prepare sql for save with $1 и $2 params
 	stmt, err := s.db.Prepare("INSERT INTO url(url, alias) VALUES ($1, $2)")
 	if err != nil {
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	// Выполнение SQL-запроса с параметрами urlToDb и alias.
+	// make request to db
 	_, err = stmt.Exec(urlToDb, alias)
 	if err != nil {
 		// checking unique key
@@ -66,4 +66,46 @@ func (s *Storage) SaveURL(urlToDb, alias string) (int64, error) {
 	}
 
 	return idURL, nil
+}
+
+func (s *Storage) GetURL(alias string) (string, error) {
+	const op = "storage.postgres.GetURL"
+
+	// prepare sql for searching url by alias
+	stmt, err := s.db.Prepare("SELECT url FROM url WHERE alias = ?")
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", op, err)
+	}
+
+	// get url by alias
+	var fullUrl string
+	err = stmt.QueryRow(alias).Scan(&fullUrl)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", storage.ErrURLNotFound
+		}
+		return "", fmt.Errorf("%s: failed to get url by alias: %w", op, err)
+	}
+
+	return fullUrl, nil
+}
+
+func (s *Storage) DeleteURL(alias string) error {
+	const op = "storage.postgres.DeleteURL"
+
+	// prepare sql for deleting url by alias
+	stmt, err := s.db.Prepare("DELETE FROM url WHERE alias = ?")
+	if err != nil {
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = stmt.QueryRow(alias).Scan()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.ErrURLNotFound
+		}
+		return fmt.Errorf("%s: failed to deletind by alias: %w", op, err)
+	}
+
+	return fmt.Errorf("%s: success deletind by alias", op)
 }
