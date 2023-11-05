@@ -5,7 +5,7 @@ import (
 	"os"
 	"url-shortner/internal/config"
 	"url-shortner/internal/lib/logger/sl"
-	"url-shortner/internal/storage/sqlite"
+	"url-shortner/internal/storage/client/postgres"
 )
 
 const (
@@ -23,10 +23,28 @@ func main() {
 	log.Info("starting url-shortner")
 	log.Debug("debug enabled")
 
-	storage, err := sqlite.New(cfg.StoragePath)
+	/*
+		for postgres db
+	*/
+	dbURL := "user=postgres dbname=url-shortner password=password sslmode=disable"
+	storage, err := postgres.New(dbURL)
 	if err != nil {
 		log.Error("failed to init storage", sl.Err(err))
 		os.Exit(1) // or return
+	}
+
+	id, err := storage.SaveURL("https://www.youtube.com/", "youtube")
+	if err != nil {
+		log.Error("failed save url", sl.Err(err))
+		os.Exit(1)
+	}
+
+	log.Info("saved url", slog.Int64("id", id))
+
+	id, err = storage.SaveURL("https://www.youtube.com/", "youtube")
+	if err != nil {
+		log.Error("failed save url", sl.Err(err))
+		os.Exit(1)
 	}
 
 	_ = storage
